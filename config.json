@@ -1,0 +1,239 @@
+[
+	{
+		"name": "main_attnres_gin",
+		"drug_dataset": {
+			"type": "mine",
+			"params": {
+				"node_path": "data/id2smiles.csv",
+				"add_global_features": false
+			}
+		},
+		"itc_dataset": {
+			"type": "mine",
+			"params": {
+				"itc_path": "data/KnownDDI.csv"
+			}
+		},
+		"save_dir": "./checkpoints",
+		"encoder": {
+			"type": "mine",
+			"params": {
+				"node_dim": 41,
+				"edge_dim": 11,
+				"h_dim": 128,
+				"layer_num": 5,
+				"dp_r": 0.1,
+				"heads": 8
+			}
+		},
+		"decoder": {
+			"type": "mine",
+			"params": {
+				"in_feature": 128,
+				"out_feature": 87,
+				"dp_r": 0.1
+			}
+		},
+		"optimizer": {
+			"type": "Adam",
+			"params": {
+				"lr": 0.001,
+				"weight_decay": 1e-5
+			}
+		},
+		"scheduler": {
+			"type": "ReduceLROnPlateau",
+			"params": {
+				"mode": "min",
+				"factor": 0.5,
+				"patience": 5,
+				"min_lr": 1e-6
+			}
+		},
+		"criterion": {
+			"label_smoothing": 0.1
+		},
+		"early_stop": {
+			"save_file_name": "best.pt",
+			"patience": 10,
+			"min_delta": 0.001,
+			"mode": "max",
+			"metric": "loss"
+		}
+	},
+	{
+		"name": "baseline_gin",
+		"drug_dataset": {
+			"type": "mine",
+			"params": {
+				"node_path": "data/id2smiles.csv",
+				"add_global_features": false
+			}
+		},
+		"itc_dataset": {
+			"type": "mine",
+			"params": {
+				"itc_path": "data/KnownDDI.csv"
+			}
+		},
+		"save_dir": "./checkpoints",
+		"encoder": {
+			"type": "gin",
+			"params": {
+				"node_dim": 41,
+				"edge_dim": 11,
+				"h_dim": 128,
+				"layer_num": 5,
+				"dp_r": 0.1,
+				"heads": 8
+			}
+		},
+		"decoder": {
+			"type": "mine",
+			"params": {
+				"in_feature": 128,
+				"out_feature": 87,
+				"dp_r": 0.1
+			}
+		},
+		"optimizer": {
+			"type": "Adam",
+			"params": {
+				"lr": 0.001,
+				"weight_decay": 1e-5
+			}
+		},
+		"scheduler": {
+			"type": "ReduceLROnPlateau",
+			"params": {
+				"mode": "min",
+				"factor": 0.5,
+				"patience": 5,
+				"min_lr": 1e-6
+			}
+		},
+		"criterion": {
+			"label_smoothing": 0.1
+		},
+		"early_stop": {
+			"save_file_name": "best_gin.pt",
+			"patience": 10,
+			"min_delta": 0.001,
+			"mode": "max",
+			"metric": "loss"
+		}
+	},
+	{
+		"name": "baseline_gcn",
+		"drug_dataset": {
+			"type": "mine",
+			"params": {
+				"node_path": "data/id2smiles.csv",
+				"add_global_features": false
+			}
+		},
+		"itc_dataset": {
+			"type": "mine",
+			"params": {
+				"itc_path": "data/KnownDDI.csv"
+			}
+		},
+		"save_dir": "./checkpoints",
+		"encoder": {
+			"type": "gcn",
+			"params": {
+				"node_dim": 41,
+				"edge_dim": 11,
+				"h_dim": 128,
+				"layer_num": 5,
+				"dp_r": 0.1,
+				"heads": 8
+			}
+		},
+		"decoder": {
+			"type": "mine",
+			"params": {
+				"in_feature": 128,
+				"out_feature": 87,
+				"dp_r": 0.1
+			}
+		},
+		"optimizer": {
+			"type": "Adam",
+			"params": {
+				"lr": 0.001,
+				"weight_decay": 1e-5
+			}
+		},
+		"scheduler": {
+			"type": "ReduceLROnPlateau",
+			"params": {
+				"mode": "min",
+				"factor": 0.5,
+				"patience": 5,
+				"min_lr": 1e-6
+			}
+		},
+		"criterion": {
+			"label_smoothing": 0.1
+		},
+		"early_stop": {
+			"save_file_name": "best_gcn.pt",
+			"patience": 10,
+			"min_delta": 0.001,
+			"mode": "max",
+			"metric": "loss"
+		}
+	},
+	{
+		"name": "baseline_identity",
+		"drug_dataset": {
+			"type": "mine",
+			"params": {
+				"node_path": "data/id2smiles.csv",
+				"add_global_features": false
+			}
+		},
+		"itc_dataset": {
+			"type": "mine",
+			"params": {
+				"itc_path": "data/KnownDDI.csv"
+			}
+		},
+		"save_dir": "./checkpoints",
+		"encoder": {
+			"type": "identity",
+			"params": {}
+		},
+		"decoder": {
+			"type": "identity",
+			"params": {}
+		},
+		"optimizer": {
+			"type": "Adam",
+			"params": {
+				"lr": 0.001,
+				"weight_decay": 1e-5
+			}
+		},
+		"scheduler": {
+			"type": "ReduceLROnPlateau",
+			"params": {
+				"mode": "min",
+				"factor": 0.5,
+				"patience": 5,
+				"min_lr": 1e-6
+			}
+		},
+		"criterion": {
+			"label_smoothing": 0.1
+		},
+		"early_stop": {
+			"save_file_name": "best_identity.pt",
+			"patience": 10,
+			"min_delta": 0.001,
+			"mode": "max",
+			"metric": "loss"
+		}
+	}
+]
