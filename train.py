@@ -87,7 +87,7 @@ if __name__ == '__main__':
         node_dim,
         edge_dim,
         h_dim=h_dim,
-        layer_num=layer_num,
+        block_num=layer_num,
         dp_r=dp_r,
         heads=heads,
 

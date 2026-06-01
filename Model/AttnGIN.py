@@ -4,7 +4,7 @@ from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import softmax
 
 
-class AttentionGIN(MessagePassing):
+class AttnGIN(MessagePassing):
     def __init__(self, node_feature, edge_feature, h_feature, dp_r, heads):
         super().__init__(aggr='add')
         self.node_feature = node_feature
@@ -42,12 +42,17 @@ class AttentionGIN(MessagePassing):
         out = (1 + self.eps) * x + out
         return out
 
-    def message(self, x_i, x_j, edge_index_i, edge_attr):
-        msg_input = torch.cat([x_j, edge_attr], dim=-1)
+    def message(self, x_j, **kwargs):
+        x_i = kwargs.get('x_i')
+        edge_attr = kwargs.get('edge_attr')
+        edge_index_i = kwargs.get('edge_index_i')
+        tensors = [t for t in ( x_j, edge_attr) if t is not None]
+        msg_input = torch.cat(tensors, dim=-1)
         msg = self.msg_net(msg_input)
         msg = msg.view(-1, self.heads, self.head_dim)
 
-        attn_input = torch.cat([x_i, x_j, edge_attr], dim=-1)
+        tensors = [t for t in ( x_i,x_j, edge_attr) if t is not None]
+        attn_input = torch.cat(tensors, dim=-1)
         attn_score = self.attn_net(attn_input)
         alpha = softmax(attn_score, edge_index_i, dim=0)
         alpha = self.dropout(alpha)
