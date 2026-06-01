@@ -13,7 +13,6 @@ from tqdm import tqdm
 from Tools import InteractionDataset, DrugDataset, wrapper_text, EarlyStopping
 from ModelComponent import get_encoder, get_decoder, get_optimizer, get_scheduler
 
-
 def train(
     encoder, decoder, drug_loader, train_loader, optimizer, criterion, scaler, device
 ):

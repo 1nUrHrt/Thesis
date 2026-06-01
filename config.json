@@ -9,7 +9,7 @@
 			}
 		},
 		"itc_dataset": {
-			"type": "mine",
+			"type": "smile",
 			"params": {
 				"itc_path": "data/KnownDDI.csv"
 			}

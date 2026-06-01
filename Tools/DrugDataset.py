@@ -1,4 +1,5 @@
 import math
+import numpy as np
 import torch
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors
@@ -7,29 +8,23 @@ import pandas as pd
 from torch.utils.data import Dataset
 
 
-
 class DrugDataset(Dataset):
     def __init__(self, node_path, add_global_features=False):
         self.node_path = node_path
         self.drug = pd.read_csv(node_path)
         self.add_global_features = add_global_features
         self.pt = Chem.GetPeriodicTable()
+        self.drug["Data"] = [
+            self.smiles_to_graph(smile) for smile in self.drug["smiles"]
+        ]
+
 
     def __len__(self):
         return len(self.drug)
 
     def __getitem__(self, idx):
-        if idx < 0:
-            idx = len(self) + idx
-        if idx < 0 or idx >= len(self):
-            raise IndexError(f"索引 {idx} 越界")
-        return self.smiles_to_graph(self.drug.iloc[idx, -1])
+        return self.drug.iloc[idx]["Data"]
 
-    def get_size(self):
-        sample = self.smiles_to_graph(self.drug.iloc[0, -1])
-        if self.add_global_features:
-            return sample.x.shape[-1], sample.edge_attr.shape[-1], sample.global_features.shape[-1]
-        return sample.x.shape[-1], sample.edge_attr.shape[-1]
 
     def one_hot_encoding(self, x, allowable_set):
         if x not in allowable_set:
@@ -41,26 +36,25 @@ class DrugDataset(Dataset):
 
         # 1. 原子类型 (10维)
         features += self.one_hot_encoding(
-            atom.GetSymbol(),
-            ['C', 'N', 'O', 'S', 'F', 'P', 'Cl', 'Br', 'I', 'Other']
+            atom.GetSymbol(), ["C", "N", "O", "S", "F", "P", "Cl", "Br", "I", "Other"]
         )
 
         # 2. 度 (6维)
         features += self.one_hot_encoding(
             atom.GetDegree(),
-            [0, 1, 2, 3, 4, 5, 6]  # 扩展到6
+            [0, 1, 2, 3, 4, 5, 6],  # 扩展到6
         )
 
         # 3. 总氢原子数 (5维)
         features += self.one_hot_encoding(
             atom.GetTotalNumHs(),
-            [0, 1, 2, 3, 4, 5]  # 扩展到5
+            [0, 1, 2, 3, 4, 5],  # 扩展到5
         )
 
         # 4. 形式电荷 (5维)
         features += self.one_hot_encoding(
             atom.GetFormalCharge(),
-            [-2, -1, 0, 1, 2]  # 扩展到-2和2
+            [-2, -1, 0, 1, 2],  # 扩展到-2和2
         )
 
         # 5. 芳香性 (1维)
@@ -77,8 +71,8 @@ class DrugDataset(Dataset):
                 Chem.rdchem.HybridizationType.SP2,
                 Chem.rdchem.HybridizationType.SP3,
                 Chem.rdchem.HybridizationType.SP3D,
-                Chem.rdchem.HybridizationType.OTHER
-            ]
+                Chem.rdchem.HybridizationType.OTHER,
+            ],
         )
 
         # 8. 手性中心 (3维) - 新增
@@ -87,8 +81,8 @@ class DrugDataset(Dataset):
             [
                 Chem.rdchem.ChiralType.CHI_UNSPECIFIED,
                 Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW,
-                Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW
-            ]
+                Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW,
+            ],
         )
 
         # 9. Gasteiger部分电荷 (1维) - 新增
@@ -115,7 +109,7 @@ class DrugDataset(Dataset):
             bond_type == Chem.rdchem.BondType.TRIPLE,
             bond_type == Chem.rdchem.BondType.AROMATIC,
             bond.GetIsConjugated(),
-            bond.IsInRing()
+            bond.IsInRing(),
         ]
 
         # 7. 键立体化学 (4维) - 新增
@@ -125,8 +119,8 @@ class DrugDataset(Dataset):
                 Chem.rdchem.BondStereo.STEREONONE,
                 Chem.rdchem.BondStereo.STEREOZ,
                 Chem.rdchem.BondStereo.STEREOE,
-                Chem.rdchem.BondStereo.STEREOCIS
-            ]
+                Chem.rdchem.BondStereo.STEREOCIS,
+            ],
         )
 
         # 8. 键长 (1维) - 新增
@@ -181,15 +175,18 @@ class DrugDataset(Dataset):
 
         # 添加全局分子特征
         if self.add_global_features:
-            global_features = torch.tensor([
-                Descriptors.MolWt(mol) / 500.0,  # 归一化
-                Descriptors.MolLogP(mol) / 10.0,
-                Descriptors.TPSA(mol) / 200.0,
-                Descriptors.NumHDonors(mol) / 10.0,
-                Descriptors.NumHAcceptors(mol) / 10.0,
-                Descriptors.NumRotatableBonds(mol) / 20.0,
-                Chem.rdMolDescriptors.CalcNumRings(mol) / 10.0
-            ], dtype=torch.float).unsqueeze(0)
+            global_features = torch.tensor(
+                [
+                    Descriptors.MolWt(mol) / 500.0,  # 归一化
+                    Descriptors.MolLogP(mol) / 10.0,
+                    Descriptors.TPSA(mol) / 200.0,
+                    Descriptors.NumHDonors(mol) / 10.0,
+                    Descriptors.NumHAcceptors(mol) / 10.0,
+                    Descriptors.NumRotatableBonds(mol) / 20.0,
+                    Chem.rdMolDescriptors.CalcNumRings(mol) / 10.0,
+                ],
+                dtype=torch.float,
+            ).unsqueeze(0)
 
             data.global_features = global_features
 
