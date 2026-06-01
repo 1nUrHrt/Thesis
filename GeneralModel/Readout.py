@@ -1,6 +1,5 @@
 import torch.nn as nn
 from torch_geometric.utils import softmax, scatter
-from .FFN import FFN
 
 
 class Readout(nn.Module):

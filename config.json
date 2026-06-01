@@ -2,7 +2,7 @@
 	{
 		"name": "main_attnres_gin",
 		"drug_dataset": {
-			"type": "mine",
+			"type": "smile",
 			"params": {
 				"node_path": "data/id2smiles.csv",
 				"add_global_features": false

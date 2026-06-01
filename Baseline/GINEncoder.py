@@ -1,6 +1,6 @@
 import torch.nn as nn
 from torch_geometric.nn import GINEConv
-from Model import ReadoutBlock
+from GeneralModel import ReadoutBlock
 
 
 class GINEncoder(nn.Module):

@@ -1,7 +1,7 @@
 import torch.nn as nn
 
-from .AttnGINLayer import AttnGINLayer
-from .FFNLayer import FFNLayer
+from ..GeneralModel.AttnGINLayer import AttnGINLayer
+from ..GeneralModel.FFNLayer import FFNLayer
 from .AttnResidual import AttnResidual
 
 

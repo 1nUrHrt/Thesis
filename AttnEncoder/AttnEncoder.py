@@ -1,12 +1,12 @@
 import torch.nn as nn
 
-from .AttnGINLayer import AttnGINLayer
-from .FFNLayer import FFNLayer
-from .ReadoutBlock import ReadoutBlock
-from .AttnResidual import AttnResidual
+from ..GeneralModel import AttnGINLayer
+from ..GeneralModel import FFNLayer
+from ..GeneralModel import ReadoutBlock
+from ..AttnResEncoder import AttnResidual
 
 
-class Encoder(nn.Module):
+class AttnEncoder(nn.Module):
     def __init__(
         self, node_dim, edge_dim, h_dim, block_num, dp_r, heads, attn_res_mode=None
     ):

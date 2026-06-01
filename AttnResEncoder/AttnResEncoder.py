@@ -1,11 +1,11 @@
 import torch.nn as nn
 
 from .AttnResEncoderBlock import AttnResEncoderBlock
-from .ReadoutBlock import ReadoutBlock
+from ..GeneralModel import ReadoutBlock
 from .AttnResidual import AttnResidual
 
 
-class AttenResEncoder(nn.Module):
+class AttnResEncoder(nn.Module):
     def __init__(self, node_dim, edge_dim, h_dim, block_num, dp_r, heads, block_size=1):
         super().__init__()
         self.node_dim = node_dim

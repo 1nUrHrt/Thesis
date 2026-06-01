@@ -10,7 +10,7 @@ from torch import nn
 from torch.utils.data import Subset, DataLoader
 from tqdm import tqdm
 from Tools import InteractionDataset, DrugDataset, wrapper_text, EarlyStopping
-from Model import Encoder, Decoder
+from AttnResEncoder import AttnEncoder, Decoder
 
 if __name__ == '__main__':
     node_path = 'data/id2smiles.csv'
@@ -83,7 +83,7 @@ if __name__ == '__main__':
         collate_fn=itc_data.itc_collate_fn
     )
 
-    encoder = Encoder(
+    encoder = AttnEncoder(
         node_dim,
         edge_dim,
         h_dim=h_dim,
