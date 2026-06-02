@@ -1,3 +1,4 @@
+from ast import keyword
 import math
 import numpy as np
 import torch
@@ -14,17 +15,13 @@ class DrugDataset(Dataset):
         self.drug = pd.read_csv(node_path)
         self.add_global_features = add_global_features
         self.pt = Chem.GetPeriodicTable()
-        self.drug["Data"] = [
-            self.smiles_to_graph(smile) for smile in self.drug["smiles"]
-        ]
-
+        self.drug["Data"] = [self.sdf_to_graph(drug_id) for drug_id in self.drug["id"]]
 
     def __len__(self):
         return len(self.drug)
 
     def __getitem__(self, idx):
-        return self.drug.iloc[idx]["Data"]
-
+        return self.drug.loc[idx]["Data"]
 
     def one_hot_encoding(self, x, allowable_set):
         if x not in allowable_set:
@@ -34,36 +31,36 @@ class DrugDataset(Dataset):
     def atom_features(self, atom):
         features = []
 
-        # 1. 原子类型 (10维)
+        # 1. 原子类型 (10)
         features += self.one_hot_encoding(
             atom.GetSymbol(), ["C", "N", "O", "S", "F", "P", "Cl", "Br", "I", "Other"]
         )
 
-        # 2. 度 (6维)
+        # 2. 度 (6)
         features += self.one_hot_encoding(
             atom.GetDegree(),
-            [0, 1, 2, 3, 4, 5, 6],  # 扩展到6
+            [0, 1, 2, 3, 4, 5, 6],
         )
 
-        # 3. 总氢原子数 (5维)
+        # 3. 总氢原子数 (5)
         features += self.one_hot_encoding(
             atom.GetTotalNumHs(),
-            [0, 1, 2, 3, 4, 5],  # 扩展到5
+            [0, 1, 2, 3, 4, 5],
         )
 
-        # 4. 形式电荷 (5维)
+        # 4. 形式电荷 (5)
         features += self.one_hot_encoding(
             atom.GetFormalCharge(),
-            [-2, -1, 0, 1, 2],  # 扩展到-2和2
+            [-2, -1, 0, 1, 2],
         )
 
-        # 5. 芳香性 (1维)
+        # 5. 芳香性 (1)
         features.append(int(atom.GetIsAromatic()))
 
-        # 6. 是否在环中 (1维)
+        # 6. 是否在环中 (1)
         features.append(int(atom.IsInRing()))
 
-        # 7. 杂化类型 (5维) - 新增
+        # 7. 杂化类型 (5)
         features += self.one_hot_encoding(
             atom.GetHybridization(),
             [
@@ -75,7 +72,7 @@ class DrugDataset(Dataset):
             ],
         )
 
-        # 8. 手性中心 (3维) - 新增
+        # 8. 手性中心 (3)
         features += self.one_hot_encoding(
             atom.GetChiralTag(),
             [
@@ -85,18 +82,8 @@ class DrugDataset(Dataset):
             ],
         )
 
-        # 9. Gasteiger部分电荷 (1维) - 新增
-        _GasteigerCharge = atom.GetDoubleProp("_GasteigerCharge")
-        if math.isnan(_GasteigerCharge) or math.isinf(_GasteigerCharge):
-            features.append(0)
-        else:
-            features.append(_GasteigerCharge)
-
-        # 10. 原子质量 (1维) - 新增
-        features.append(atom.GetMass() / 100.0)  # 归一化
-
-        # 11. 范德华半径 (1维) - 新增
-        features.append(self.pt.GetRvdw(atom.GetAtomicNum()) / 2.0)  # 归一化
+        # 9.原子质量 (1)
+        features.append(atom.GetMass() / 100.0)
 
         return features
 
@@ -112,7 +99,7 @@ class DrugDataset(Dataset):
             bond.IsInRing(),
         ]
 
-        # 7. 键立体化学 (4维) - 新增
+        # 键立体化学
         features += self.one_hot_encoding(
             bond.GetStereo(),
             [
@@ -123,30 +110,22 @@ class DrugDataset(Dataset):
             ],
         )
 
-        # 8. 键长 (1维) - 新增
-        features.append(bond.GetDoubleProp("_BondLength"))
-
         return features
 
-    def smiles_to_graph(self, smiles):
-        mol = Chem.MolFromSmiles(smiles)
-
+    def sdf_to_graph(self, drug_id):
+        sdf_path = f"./data/drug_sdf/{drug_id}.sdf"
+        supplier = Chem.SDMolSupplier(sdf_path, sanitize=False)
+        mol = next(supplier)
         if mol is None:
+            print(f"读取失败:{sdf_path}")
             return None
 
-        # 预计算Gasteiger电荷和3D结构以获取键长
-        mol = Chem.AddHs(mol)  # 添加氢原子以获得更准确的电荷和结构
-        AllChem.ComputeGasteigerCharges(mol)
+        try:
+            mol.UpdatePropertyCache(strict=False)
+        except:
+            print(f"UpdatePropertyCache失败:{sdf_path}")
+            return None
 
-        AllChem.Compute2DCoords(mol)
-
-        # 存储键长
-        conf = mol.GetConformer()
-        for bond in mol.GetBonds():
-            i = bond.GetBeginAtomIdx()
-            j = bond.GetEndAtomIdx()
-            length = Chem.rdMolTransforms.GetBondLength(conf, i, j)
-            bond.SetDoubleProp("_BondLength", length)
 
         # 节点特征
         x = []
@@ -175,20 +154,23 @@ class DrugDataset(Dataset):
 
         # 添加全局分子特征
         if self.add_global_features:
-            global_features = torch.tensor(
-                [
-                    Descriptors.MolWt(mol) / 500.0,  # 归一化
-                    Descriptors.MolLogP(mol) / 10.0,
-                    Descriptors.TPSA(mol) / 200.0,
-                    Descriptors.NumHDonors(mol) / 10.0,
-                    Descriptors.NumHAcceptors(mol) / 10.0,
-                    Descriptors.NumRotatableBonds(mol) / 20.0,
-                    Chem.rdMolDescriptors.CalcNumRings(mol) / 10.0,
-                ],
-                dtype=torch.float,
-            ).unsqueeze(0)
-
-            data.global_features = global_features
+            try:
+                global_features = torch.tensor(
+                    [
+                        Descriptors.MolWt(mol) / 500.0,
+                        Descriptors.MolLogP(mol) / 10.0,
+                        Descriptors.TPSA(mol) / 200.0,
+                        Descriptors.NumHDonors(mol) / 10.0,
+                        Descriptors.NumHAcceptors(mol) / 10.0,
+                        Descriptors.NumRotatableBonds(mol) / 20.0,
+                        Chem.rdMolDescriptors.CalcNumRings(mol) / 10.0,
+                    ],
+                    dtype=torch.float,
+                ).unsqueeze(0)
+                data.global_features = global_features
+            except:
+                # 全局描述符异常填充0向量
+                data.global_features = torch.zeros((1, 7))
 
         return data
 
