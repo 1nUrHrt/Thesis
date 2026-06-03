@@ -1,4 +1,4 @@
-import numpy as np
+
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
@@ -13,11 +13,11 @@ class InteractionDataset(Dataset):
         return len(self.itc)
 
     def __getitem__(self, idx):
-        return self.itc.iloc[idx].values
+        return self.itc.loc[idx].values
 
     @property
     def labels(self):
-        return self.itc.iloc[:, -1].values
+        return self.itc.loc[:, -1].values
 
     def itc_collate_fn(self, batch):
         drug1 = []

@@ -3,11 +3,10 @@ import shutil
 from matplotlib.offsetbox import DraggableAnnotation
 import pandas as pd
 from rdkit import Chem
-
+from rdkit.Chem import AllChem
 
 import os
 import pandas as pd
-from rdkit import Chem
 
 # # =========改这里两个路径=========
 # sdf_folder = r"./data/DrugBank5.0_Approved_drugs"
@@ -78,3 +77,39 @@ from rdkit import Chem
 # itc['Drug2'] = itc['Drug2'].map(re_dic)
 
 # itc.to_csv(r"./data/KnownDDI-final-id.csv", index=False)
+
+import os
+from rdkit import Chem
+from rdkit.Chem import AllChem
+
+dir_path = r'./data/drug_sdf'
+save_path = r'./data/drug_sdf_3d'
+os.makedirs(save_path, exist_ok=True)
+
+# 创建 ETKDG 参数并固定随机种子（确保可重复性）
+params = AllChem.ETKDGv3()
+params.randomSeed = 42
+
+for filename in os.listdir(dir_path):
+    if not filename.endswith('.sdf'):
+        continue
+    sdf_path = os.path.join(dir_path, filename)
+    suppl = Chem.SDMolSupplier(sdf_path, sanitize=False)
+    mol = next(suppl, None)   # 避免 StopIteration
+    if mol is None:
+        print(f"Warning: No molecule in {filename}")
+        continue
+    
+    mol.UpdatePropertyCache(strict=False)
+    molH = AllChem.AddHs(mol)
+    
+    # 嵌入三维结构
+    success = AllChem.EmbedMolecule(molH, params)
+    if success == -1:
+        print(f"Embedding failed for {filename}")
+        continue
+    
+    # 保存为 SDF
+    save_path_file = os.path.join(save_path, filename)
+    with Chem.SDWriter(save_path_file) as writer:
+        writer.write(molH)

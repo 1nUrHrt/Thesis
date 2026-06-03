@@ -1,20 +1,18 @@
-from ast import keyword
-import math
-import numpy as np
 import torch
 from rdkit import Chem
-from rdkit.Chem import AllChem, Descriptors
+from rdkit.Chem import  Descriptors
 from torch_geometric.data import Data, Batch
 import pandas as pd
 from torch.utils.data import Dataset
-
+from rdkit import RDLogger
+RDLogger.DisableLog('rdApp.warning')
 
 class DrugDataset(Dataset):
     def __init__(self, node_path, add_global_features=False):
         self.node_path = node_path
         self.drug = pd.read_csv(node_path)
         self.add_global_features = add_global_features
-        self.pt = Chem.GetPeriodicTable()
+        # self.pt = Chem.GetPeriodicTable()
         self.drug["Data"] = [self.sdf_to_graph(drug_id) for drug_id in self.drug["id"]]
 
     def __len__(self):

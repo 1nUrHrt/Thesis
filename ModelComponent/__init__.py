@@ -1,6 +1,6 @@
-from ..AttnEncoder import AttnEncoder
-from ..AttnResEncoder import AttnResEncoder
-from ..GeneralModel import Decoder
+from AttnEncoder import AttnEncoder
+from AttnResEncoder import AttnResEncoder
+from GeneralModel import Decoder
 import torch
 
 def get_encoder(config):

@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 from .AttnResEncoderBlock import AttnResEncoderBlock
-from ..GeneralModel import ReadoutBlock
+from GeneralModel import ReadoutBlock
 from .AttnResidual import AttnResidual
 
 

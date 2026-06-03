@@ -1,7 +1,7 @@
 from torch import nn
 
-from ..GeneralModel import AttnGINLayer
-from ..GeneralModel import FFNLayer
+from GeneralModel import AttnGINLayer
+from GeneralModel import FFNLayer
 
 
 class EncoderBlock(nn.Module):

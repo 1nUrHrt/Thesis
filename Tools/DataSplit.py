@@ -13,28 +13,38 @@ def split_s1(base_dir, drug_file_name, itc_file_name, tr=0.7, va=0.1, te=0.2, se
     train_df, temp_df = train_test_split(
         itc, test_size=1 - tr, random_state=seed, stratify=itc["label"]
     )
+
+    train_drug = collect_drugs(train_df["drug1"], train_df["drug2"])
+    train_dict = {key: i for i, key in enumerate(train_drug)}
+    train_df["drug1"] = train_df["drug1"].map(train_dict)
+    train_df["drug2"] = train_df["drug2"].map(train_dict)
+
+
+    temp_drug = collect_drugs(temp_df["drug1"], temp_df["drug2"])
+    temp_dict = {key: i for i, key in enumerate(temp_drug)}
+    temp_df["drug1"] = temp_df["drug1"].map(temp_dict)
+    temp_df["drug2"] = temp_df["drug2"].map(temp_dict)
+
+
     val_df, test_df = train_test_split(
         temp_df, test_size=te / (va + te), random_state=seed, stratify=temp_df["label"]
     )
 
     save_splits(
         os.path.join(base_dir, "s1"),
-        collect_drugs(train_df),
-        collect_drugs(val_df),
-        collect_drugs(test_df),
+        train_drug,
+        temp_drug,
         train_df,
         val_df,
         test_df,
     )
 
 
-def collect_drugs(df):
-    return (
-        pd.concat([df["drug1"], df["drug2"]]).drop_duplicates().reset_index(drop=True)
-    )
+def collect_drugs(*args):
+    return pd.concat([*args]).drop_duplicates().reset_index(drop=True)
 
 
-def save_splits(dir_path, train_drugs, val_drugs, test_drugs, train, val, test):
+def save_splits(dir_path, train_drugs, temp_drug, train, val, test):
 
     header = ["id"]
 
@@ -43,9 +53,8 @@ def save_splits(dir_path, train_drugs, val_drugs, test_drugs, train, val, test):
     train_drugs.to_csv(
         os.path.join(dir_path, "train_set.csv"), index=False, header=header
     )
-    val_drugs.to_csv(os.path.join(dir_path, "val_set.csv"), index=False, header=header)
-    test_drugs.to_csv(
-        os.path.join(dir_path, "test_set.csv"), index=False, header=header
+    temp_drug.to_csv(
+        os.path.join(dir_path, "val_and_test_set.csv"), index=False, header=header
     )
 
     train.to_csv(os.path.join(dir_path, "train.csv"), index=False)
