@@ -13,13 +13,18 @@ class DrugDataset(Dataset):
         self.drug = pd.read_csv(node_path)
         self.add_global_features = add_global_features
         # self.pt = Chem.GetPeriodicTable()
-        self.drug["Data"] = [self.sdf_to_graph(drug_id) for drug_id in self.drug["id"]]
+        self.drug["data"] = [self.sdf_to_graph(drug_id) for drug_id in self.drug["id"]]
 
     def __len__(self):
         return len(self.drug)
 
     def __getitem__(self, idx):
-        return self.drug.loc[idx]["Data"]
+        if isinstance(idx, str) and idx.startswith("DB"):
+            row = self.drug[self.drug['id'] == idx]
+            if len(row) == 0:
+                raise KeyError(f"ID {idx} not found")
+            return row.iloc[0]['data']
+        return self.drug.loc[idx]["data"]
 
     def one_hot_encoding(self, x, allowable_set):
         if x not in allowable_set:

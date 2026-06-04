@@ -5,7 +5,7 @@ from .EarlyStopping import EarlyStopping
 
 import os
 from typing import Literal
-
+from .SubDrugDataset import SubDrugDataset
 from AttnEncoder import AttnEncoder
 from AttnResEncoder import AttnResEncoder
 from GeneralModel import Decoder
@@ -49,11 +49,13 @@ def load_dataset(base_dir: str, split_type: Literal["s1", "s2", "s3"]):
     def get_path(file_name):
         return os.path.join(base_dir, split_type, file_name)
 
-    train_set = DrugDataset(get_path("train_set.csv"))
+    drug_set = DrugDataset(os.path.join(base_dir, "drug.csv"))
+
+    train_set = SubDrugDataset(get_path("train_set.csv"), drug_set)
+    val_set = SubDrugDataset(get_path("val_set.csv"), drug_set)
+    test_set = SubDrugDataset(get_path("test_set.csv"), drug_set)
     train_itc = InteractionDataset(get_path("train.csv"))
-    val_set = DrugDataset(get_path("val_set.csv"))
     val_itc = InteractionDataset(get_path("val.csv"))
-    test_set = DrugDataset(get_path("test_set.csv"))
     test_itc = InteractionDataset(get_path("test.csv"))
     return train_set, train_itc, val_set, val_itc, test_set, test_itc
 
@@ -80,4 +82,5 @@ __all__ = [
     "get_optimizer",
     "get_scheduler",
     "load_dataset",
+    "SubDrugDataset",
 ]

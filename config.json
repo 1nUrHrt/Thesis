@@ -1,262 +1,87 @@
-[
-	{
-		"name": "main_attnres_gin",
-		"save_dir": "./checkpoints",
-		"dataset": {
-			"base_dir": "",
-			"split_type": ""
+{
+	"name": "main_attnres_gin",
+	"save_dir": "./checkpoints",
+	"epochs": 200,
+	"metric_average": "",
+	"dataset": {
+		"base_dir": "",
+		"split_type": ""
+	},
+	"data_loader": {
+		"train_set": {
+			"batch_size": "",
+			"shuffle": "False",
+			"num_workers": 0
 		},
-		"data_loader": {
-			"train_set": {
-				"batch_size": "",
-				"shuffle": "False",
-				"num_workers": 0
-			},
-			"train_itc": {
-				"batch_size": "",
-				"shuffle": "False",
-				"num_workers": 0
-			},
-			"val_set": {
-				"batch_size": "",
-				"shuffle": "False",
-				"num_workers": 0
-			},
-			"val_itc": {
-				"batch_size": "",
-				"shuffle": "False",
-				"num_workers": 0
-			},
-			"test_set": {
-				"batch_size": "",
-				"shuffle": "False",
-				"num_workers": 0
-			},
-			"test_itc": {
-				"batch_size": "",
-				"shuffle": "False",
-				"num_workers": 0
-			}
+		"train_itc": {
+			"batch_size": "",
+			"shuffle": "False",
+			"num_workers": 0
 		},
-		"encoder": {
-			"type": "mine",
-			"params": {
-				"node_dim": 41,
-				"edge_dim": 11,
-				"h_dim": 128,
-				"layer_num": 5,
-				"dp_r": 0.1,
-				"heads": 8
-			}
+		"val_set": {
+			"batch_size": "",
+			"shuffle": "False",
+			"num_workers": 0
 		},
-		"decoder": {
-			"type": "mine",
-			"params": {
-				"in_feature": 128,
-				"out_feature": 87,
-				"dp_r": 0.1
-			}
+		"val_itc": {
+			"batch_size": "",
+			"shuffle": "False",
+			"num_workers": 0
 		},
-		"optimizer": {
-			"type": "Adam",
-			"params": {
-				"lr": 0.001,
-				"weight_decay": 1e-5
-			}
+		"test_set": {
+			"batch_size": "",
+			"shuffle": "False",
+			"num_workers": 0
 		},
-		"scheduler": {
-			"type": "ReduceLROnPlateau",
-			"params": {
-				"mode": "min",
-				"factor": 0.5,
-				"patience": 5,
-				"min_lr": 1e-6
-			}
-		},
-		"criterion": {
-			"label_smoothing": 0.1
-		},
-		"early_stop": {
-			"save_file_name": "best.pt",
-			"patience": 10,
-			"min_delta": 0.001,
-			"mode": "max",
-			"metric": "loss"
+		"test_itc": {
+			"batch_size": "",
+			"shuffle": "False",
+			"num_workers": 0
 		}
 	},
-	{
-		"name": "baseline_gin",
-		"drug_dataset": {
-			"type": "mine",
-			"params": {
-				"node_path": "data/id2smiles.csv",
-				"add_global_features": false
-			}
-		},
-		"itc_dataset": {
-			"type": "mine",
-			"params": {
-				"itc_path": "data/KnownDDI.csv"
-			}
-		},
-		"save_dir": "./checkpoints",
-		"encoder": {
-			"type": "gin",
-			"params": {
-				"node_dim": 41,
-				"edge_dim": 11,
-				"h_dim": 128,
-				"layer_num": 5,
-				"dp_r": 0.1,
-				"heads": 8
-			}
-		},
-		"decoder": {
-			"type": "mine",
-			"params": {
-				"in_feature": 128,
-				"out_feature": 87,
-				"dp_r": 0.1
-			}
-		},
-		"optimizer": {
-			"type": "Adam",
-			"params": {
-				"lr": 0.001,
-				"weight_decay": 1e-5
-			}
-		},
-		"scheduler": {
-			"type": "ReduceLROnPlateau",
-			"params": {
-				"mode": "min",
-				"factor": 0.5,
-				"patience": 5,
-				"min_lr": 1e-6
-			}
-		},
-		"criterion": {
-			"label_smoothing": 0.1
-		},
-		"early_stop": {
-			"save_file_name": "best_gin.pt",
-			"patience": 10,
-			"min_delta": 0.001,
-			"mode": "max",
-			"metric": "loss"
+	"encoder": {
+		"type": "mine",
+		"params": {
+			"node_dim": 41,
+			"edge_dim": 11,
+			"h_dim": 128,
+			"layer_num": 5,
+			"dp_r": 0.1,
+			"heads": 8
 		}
 	},
-	{
-		"name": "baseline_gcn",
-		"drug_dataset": {
-			"type": "mine",
-			"params": {
-				"node_path": "data/id2smiles.csv",
-				"add_global_features": false
-			}
-		},
-		"itc_dataset": {
-			"type": "mine",
-			"params": {
-				"itc_path": "data/KnownDDI.csv"
-			}
-		},
-		"save_dir": "./checkpoints",
-		"encoder": {
-			"type": "gcn",
-			"params": {
-				"node_dim": 41,
-				"edge_dim": 11,
-				"h_dim": 128,
-				"layer_num": 5,
-				"dp_r": 0.1,
-				"heads": 8
-			}
-		},
-		"decoder": {
-			"type": "mine",
-			"params": {
-				"in_feature": 128,
-				"out_feature": 87,
-				"dp_r": 0.1
-			}
-		},
-		"optimizer": {
-			"type": "Adam",
-			"params": {
-				"lr": 0.001,
-				"weight_decay": 1e-5
-			}
-		},
-		"scheduler": {
-			"type": "ReduceLROnPlateau",
-			"params": {
-				"mode": "min",
-				"factor": 0.5,
-				"patience": 5,
-				"min_lr": 1e-6
-			}
-		},
-		"criterion": {
-			"label_smoothing": 0.1
-		},
-		"early_stop": {
-			"save_file_name": "best_gcn.pt",
-			"patience": 10,
-			"min_delta": 0.001,
-			"mode": "max",
-			"metric": "loss"
+	"decoder": {
+		"type": "mine",
+		"params": {
+			"in_feature": 128,
+			"out_feature": 87,
+			"dp_r": 0.1
 		}
 	},
-	{
-		"name": "baseline_identity",
-		"drug_dataset": {
-			"type": "mine",
-			"params": {
-				"node_path": "data/id2smiles.csv",
-				"add_global_features": false
-			}
-		},
-		"itc_dataset": {
-			"type": "mine",
-			"params": {
-				"itc_path": "data/KnownDDI.csv"
-			}
-		},
-		"save_dir": "./checkpoints",
-		"encoder": {
-			"type": "identity",
-			"params": {}
-		},
-		"decoder": {
-			"type": "identity",
-			"params": {}
-		},
-		"optimizer": {
-			"type": "Adam",
-			"params": {
-				"lr": 0.001,
-				"weight_decay": 1e-5
-			}
-		},
-		"scheduler": {
-			"type": "ReduceLROnPlateau",
-			"params": {
-				"mode": "min",
-				"factor": 0.5,
-				"patience": 5,
-				"min_lr": 1e-6
-			}
-		},
-		"criterion": {
-			"label_smoothing": 0.1
-		},
-		"early_stop": {
-			"save_file_name": "best_identity.pt",
-			"patience": 10,
-			"min_delta": 0.001,
-			"mode": "max",
-			"metric": "loss"
+	"optimizer": {
+		"type": "Adam",
+		"params": {
+			"lr": 0.001,
+			"weight_decay": 1e-5
 		}
+	},
+	"scheduler": {
+		"type": "ReduceLROnPlateau",
+		"params": {
+			"mode": "min",
+			"factor": 0.5,
+			"patience": 5,
+			"min_lr": 1e-6
+		}
+	},
+	"criterion": {
+		"label_smoothing": 0.1
+	},
+	"early_stop": {
+		"save_file_name": "best.pt",
+		"patience": 10,
+		"min_delta": 0.001,
+		"mode": "max",
+		"metric": "loss"
 	}
-]
+}

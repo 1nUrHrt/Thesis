@@ -5,6 +5,8 @@ from torch_geometric.data import Batch
 from AttnEncoder import AttnEncoder
 import pandas as pd
 
+from Tools.SubDrugDataset import SubDrugDataset
+
 if __name__ == "__main__":
     # node_path = "data/s1/val_and_test_set.csv"
     # itc_path = "data/s1/test.csv"
@@ -32,24 +34,30 @@ if __name__ == "__main__":
     #     drug1,drug2,label = batch
     #     print(x[drug1])
 
-    node_path = "data/s1/val_and_test_set.csv"
+    node_path = "data/drug.csv"
+    sub_path = "data/s1/test_set.csv"
     itc_path = "data/s1/test.csv"
     drug_dataset = DrugDataset(node_path)
+    sub_dataset = SubDrugDataset(sub_path,drug_dataset=drug_dataset)
     itc_dataset = InteractionDataset(itc_path)
     drug_loader = DataLoader(
-        drug_dataset,
+        sub_dataset,
         batch_size=1024,
         shuffle=False,
-        collate_fn=lambda batch: Batch.from_data_list(batch),
+        collate_fn=drug_dataset.drug_collate_fn,
     )
-    itc_loader = DataLoader(
-        itc_dataset,
-        batch_size=1024 * 10 * 2,
-        shuffle=True,
-        collate_fn=itc_dataset.itc_collate_fn,
-    )
-    print(len(drug_dataset))
-    for batch in itc_loader:
-        drug1, drug2, label = batch
-        drugs = torch.cat([drug1,drug2]).unique()
-        print(drugs.shape)
+    for batch in drug_loader :
+        print(batch)
+        break
+
+    # itc_loader = DataLoader(
+    #     itc_dataset,
+    #     batch_size=1024 * 10 * 2,
+    #     shuffle=True,
+    #     collate_fn=itc_dataset.itc_collate_fn,
+    # )
+    # print(len(drug_dataset))
+    # for batch in itc_loader:
+    #     drug1, drug2, label = batch
+    #     drugs = torch.cat([drug1,drug2]).unique()
+    #     print(drugs.shape)
