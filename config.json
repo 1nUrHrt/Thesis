@@ -1,20 +1,43 @@
 [
 	{
 		"name": "main_attnres_gin",
-		"drug_dataset": {
-			"type": "smile",
-			"params": {
-				"node_path": "data/id2smiles.csv",
-				"add_global_features": false
-			}
-		},
-		"itc_dataset": {
-			"type": "smile",
-			"params": {
-				"itc_path": "data/KnownDDI.csv"
-			}
-		},
 		"save_dir": "./checkpoints",
+		"dataset": {
+			"base_dir": "",
+			"split_type": ""
+		},
+		"data_loader": {
+			"train_set": {
+				"batch_size": "",
+				"shuffle": "False",
+				"num_workers": 0
+			},
+			"train_itc": {
+				"batch_size": "",
+				"shuffle": "False",
+				"num_workers": 0
+			},
+			"val_set": {
+				"batch_size": "",
+				"shuffle": "False",
+				"num_workers": 0
+			},
+			"val_itc": {
+				"batch_size": "",
+				"shuffle": "False",
+				"num_workers": 0
+			},
+			"test_set": {
+				"batch_size": "",
+				"shuffle": "False",
+				"num_workers": 0
+			},
+			"test_itc": {
+				"batch_size": "",
+				"shuffle": "False",
+				"num_workers": 0
+			}
+		},
 		"encoder": {
 			"type": "mine",
 			"params": {
