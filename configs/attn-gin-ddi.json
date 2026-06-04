@@ -3,8 +3,10 @@
 	"save_dir": "./checkpoints",
 	"best_save_name": "best.pt",
 	"current_save_name": "current.pt",
-	"result_dict_name": "result_dict_name.csv",
+	"result_dict_name": "result_dict.csv",
 	"epochs": 200,
+	"metric": "f1_score",
+	"manual_seed": 42,
 	"metric_average": "macro",
 	"dataset": {
 		"base_dir": "./data",
@@ -28,7 +30,7 @@
 		},
 		"val_itc": {
 			"batch_size": 20480,
-			"shuffle": true,
+			"shuffle": false,
 			"num_workers": 2
 		},
 		"test_set": {
@@ -38,7 +40,7 @@
 		},
 		"test_itc": {
 			"batch_size": 20480,
-			"shuffle": true,
+			"shuffle": false,
 			"num_workers": 2
 		}
 	},
@@ -68,10 +70,12 @@
 			"weight_decay": 1e-5
 		}
 	},
+	"criterion": {
+		"label_smoothing": 0.1
+	},
 	"scheduler": {
 		"type": "ReduceLROnPlateau",
 		"params": {
-			"mode": "min",
 			"factor": 0.5,
 			"patience": 5,
 			"min_lr": 1e-6

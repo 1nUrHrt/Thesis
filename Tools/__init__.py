@@ -11,6 +11,18 @@ from AttnResEncoder import AttnResEncoder
 from GeneralModel import DefaultDecoder
 import torch
 
+import time
+
+
+class Timer:
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.perf_counter()
+        self.elapsed = self.end - self.start
+
 
 def get_encoder(config):
     model_name = config["type"]
@@ -38,9 +50,9 @@ def get_optimizer(config, model_parameters):
     return optimizer
 
 
-def get_scheduler(config, optimizer):
+def get_scheduler(config, mode, optimizer):
     scheduler_cls = getattr(torch.optim.lr_scheduler, config["type"])
-    scheduler = scheduler_cls(optimizer, **config["params"])
+    scheduler = scheduler_cls(optimizer, mode=mode, **config["params"])
     return scheduler
 
 
@@ -83,4 +95,5 @@ __all__ = [
     "get_scheduler",
     "load_dataset",
     "SubDrugDataset",
+    "Timer",
 ]
