@@ -30,7 +30,6 @@ def train(
 
     train_loss = 0.0
     train_acc = 0.0
-
     for d1, d2, labels in itc_loader:
         d1, d2, labels = d1.to(device), d2.to(device), labels.to(device)
         optimizer.zero_grad()
@@ -192,8 +191,8 @@ def evaluate(config):
         pin_memory=pin_memory,
         **loader_config["test_itc"],
     )
-    encoder = get_encoder(config["encoder"])
-    decoder = get_decoder(config["decoder"])
+    encoder = get_encoder(config["encoder"]).to(device)
+    decoder = get_decoder(config["decoder"]).to(device)
     optimizer = get_optimizer(
         config["optimizer"], list(encoder.parameters()) + list(decoder.parameters())
     )
@@ -212,6 +211,7 @@ def evaluate(config):
     }
 
     if os.path.exists(current_save_path):
+        print("loading history models")
         current_checkpoint = torch.load(current_save_path)
         start_epoch = current_checkpoint["epoch"]
         encoder.load_state_dict(current_checkpoint["encoder"])
@@ -227,12 +227,14 @@ def evaluate(config):
         torch.random.set_rng_state(current_checkpoint["torch_random"])
         np.random.set_state(current_checkpoint["numpy_random"])
         random.setstate(current_checkpoint["python_random"])
+        print("history model load successfully")
 
     if os.path.exists(result_dict_path):
         df = pd.read_csv(result_dict_path)
         result_dict = df.to_dict()
 
     for epoch in range(start_epoch, epochs):
+        current_epoch = epoch + 1
         avg_train_loss, avg_train_acc = train(
             encoder,
             decoder,
@@ -240,10 +242,12 @@ def evaluate(config):
             train_itc_loader,
             optimizer,
             criterion,
-            scaler,
             device,
+            scaler,
         )
-
+        print(
+            f"[Train] [Epoch:{current_epoch}] avg_train_loss:{avg_train_loss},avg_train_acc:{avg_train_acc}"
+        )
         result_dict["avg_train_acc"].append(avg_train_loss)
         result_dict["avg_train_acc"].append(avg_train_acc)
 
@@ -256,6 +260,9 @@ def evaluate(config):
             metric_average,
             device,
         )
+        print(
+            f"[Val] [Epoch:{current_epoch}] avg_val_loss:{avg_val_loss},val_acc:{val_acc},val_f1:{val_f1},val_auc:{val_auc}"
+        )
         result_dict["avg_val_loss"].append(avg_val_loss)
         result_dict["val_acc"].append(val_acc)
         result_dict["val_f1"].append(val_f1)
@@ -265,19 +272,24 @@ def evaluate(config):
         is_improved = early_stop(val_f1)
 
         if not is_improved:
-            print(f"trigger counter: {early_stop.counter}/{early_stop.patience}")
+            print(
+                f"[Early Stop] [Epoch:{current_epoch}],trigger counter: {early_stop.counter}/{early_stop.patience}"
+            )
         else:
             early_stop.save_checkpoint(
                 {
-                    "best_epoch": epoch + 1,
+                    "best_epoch": current_epoch,
                     "encoder": encoder.state_dict(),
                     "decoder": decoder.state_dict(),
                 },
                 best_save_path,
             )
+            print(
+                f"[Save Checkpoint] [Epoch:{current_epoch}],save best checkpoint successfully"
+            )
 
         checkpoint = {
-            "epoch": epoch + 1,
+            "epoch": current_epoch,
             "encoder": encoder.state_dict(),
             "decoder": decoder.state_dict(),
             "optimizer": optimizer.state_dict(),
@@ -293,11 +305,12 @@ def evaluate(config):
         }
 
         torch.save(checkpoint, current_save_path)
+        print(f"[Save Checkpoint] [Epoch:{current_epoch}],save current checkpoint successfully")
 
         pd.DataFrame(result_dict).to_csv(result_dict_path, index=False)
 
         if early_stop.early_stop:
-            print("trigger early_stop")
+            print(f"[Save Checkpoint] [Epoch:{current_epoch}] trigger early_stop")
             break
 
 
@@ -306,11 +319,10 @@ def run_experiment(config_path):
         with open(config_path, "r") as f:
             config = json.load(f)
             evaluate(config=config)
-    configs = os.listdir(config_path)
-    for config in configs:
-        with open(config_path, "r") as f:
-            config = json.load(f)
-            evaluate(config=config)
-
-
-run_experiment("./config.json")
+    else:
+        configs = os.listdir(config_path)
+        for config in configs:
+            current_path = os.path.join(config_path, config)
+            with open(current_path, "r") as f:
+                config = json.load(f)
+                evaluate(config=config)

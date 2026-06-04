@@ -5,7 +5,7 @@
 	"current_save_name": "current.pt",
 	"result_dict_name": "result_dict_name.csv",
 	"epochs": 200,
-	"metric_average": "macor",
+	"metric_average": "macro",
 	"dataset": {
 		"base_dir": "./data",
 		"split_type": "s1"
@@ -13,32 +13,32 @@
 	"data_loader": {
 		"train_set": {
 			"batch_size": 2048,
-			"shuffle": "False",
+			"shuffle": false,
 			"num_workers": 2
 		},
 		"train_itc": {
 			"batch_size": 20480,
-			"shuffle": "True",
+			"shuffle": true,
 			"num_workers": 2
 		},
 		"val_set": {
 			"batch_size": 2048,
-			"shuffle": "False",
+			"shuffle": false,
 			"num_workers": 2
 		},
 		"val_itc": {
 			"batch_size": 20480,
-			"shuffle": "True",
+			"shuffle": true,
 			"num_workers": 2
 		},
 		"test_set": {
 			"batch_size": 2048,
-			"shuffle": "False",
+			"shuffle": false,
 			"num_workers": 2
 		},
 		"test_itc": {
 			"batch_size": 20480,
-			"shuffle": "True",
+			"shuffle": true,
 			"num_workers": 2
 		}
 	},
