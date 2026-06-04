@@ -1,7 +1,9 @@
 import json
+import os
 import random
 
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.metrics import f1_score, accuracy_score, roc_auc_score
 from torch.amp.autocast_mode import autocast
@@ -129,20 +131,26 @@ def test(encoder, decoder, drug_loader, itc_loader, criterion, metric_average, d
     return avg_val_loss, val_acc, val_f1, val_auc
 
 
-def run_experiment(config_path):
-    with open(config_path, "r") as f:
-        configs = json.load(f)
-    for config in configs:
-        evaluate(config)
-
-
 def evaluate(config):
+
+    experiment_name = config["name"]
+    print(f"current experiment:{experiment_name}")
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"device:{device}")
 
     epochs = config["epochs"]
+    start_epoch = 0
+    print(f"total epochs:{epochs}")
+
     metric_average = config["metric_average"]
     pin_memory = True if torch.cuda.is_available() else False
+
+    base_dir = os.path.join(config["save_dir"], experiment_name)
+    os.makedirs(base_dir, exist_ok=True)
+    best_save_path = os.path.join(base_dir, config["best_save_name"])
+    current_save_path = os.path.join(base_dir, config["current_save_name"])
+    result_dict_path = os.path.join(base_dir, config["result_dict_name"])
 
     train_set, train_itc, val_set, val_itc, test_set, test_itc = load_dataset(
         **config["dataset"]
@@ -190,10 +198,41 @@ def evaluate(config):
         config["optimizer"], list(encoder.parameters()) + list(decoder.parameters())
     )
     scheduler = get_scheduler(config["scheduler"], optimizer)
-    criterion = nn.CrossEntropyLoss(**config["criterion"])
-    early_stop = EarlyStopping(**config["early_stop"])
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    early_stop = EarlyStopping(mode="max", **config["early_stop"])
     scaler = GradScaler()
-    for epoch in range(epochs):
+
+    result_dict = {
+        "avg_train_loss": [],
+        "avg_train_acc": [],
+        "avg_val_loss": [],
+        "val_acc": [],
+        "val_f1": [],
+        "val_auc": [],
+    }
+
+    if os.path.exists(current_save_path):
+        current_checkpoint = torch.load(current_save_path)
+        start_epoch = current_checkpoint["epoch"]
+        encoder.load_state_dict(current_checkpoint["encoder"])
+        decoder.load_state_dict(current_checkpoint["decoder"])
+        optimizer.load_state_dict(current_checkpoint["optimizer"])
+        scheduler.load_state_dict(current_checkpoint["scheduler"])
+        early_stop.load_state_dict(current_checkpoint["early_stop"])
+        scaler.load_state_dict(current_checkpoint["scaler"])
+        optimizer.load_state_dict(current_checkpoint["optimizer"])
+
+        if torch.cuda.is_available() and current_checkpoint["cuda_random"] is not None:
+            torch.cuda.set_rng_state_all(current_checkpoint["cuda_random"])
+        torch.random.set_rng_state(current_checkpoint["torch_random"])
+        np.random.set_state(current_checkpoint["numpy_random"])
+        random.setstate(current_checkpoint["python_random"])
+
+    if os.path.exists(result_dict_path):
+        df = pd.read_csv(result_dict_path)
+        result_dict = df.to_dict()
+
+    for epoch in range(start_epoch, epochs):
         avg_train_loss, avg_train_acc = train(
             encoder,
             decoder,
@@ -205,6 +244,9 @@ def evaluate(config):
             device,
         )
 
+        result_dict["avg_train_acc"].append(avg_train_loss)
+        result_dict["avg_train_acc"].append(avg_train_acc)
+
         avg_val_loss, val_acc, val_f1, val_auc = validate(
             encoder,
             decoder,
@@ -214,15 +256,25 @@ def evaluate(config):
             metric_average,
             device,
         )
+        result_dict["avg_val_loss"].append(avg_val_loss)
+        result_dict["val_acc"].append(val_acc)
+        result_dict["val_f1"].append(val_f1)
+        result_dict["val_auc"].append(val_auc)
+
         scheduler.step(avg_val_loss)
-        is_improved = early_stop(
-            val_f1,
-            epoch + 1,
-            {
-                "encoder": encoder.state_dict(),
-                "decoder": decoder.state_dict(),
-            },
-        )
+        is_improved = early_stop(val_f1)
+
+        if not is_improved:
+            print(f"trigger counter: {early_stop.counter}/{early_stop.patience}")
+        else:
+            early_stop.save_checkpoint(
+                {
+                    "best_epoch": epoch + 1,
+                    "encoder": encoder.state_dict(),
+                    "decoder": decoder.state_dict(),
+                },
+                best_save_path,
+            )
 
         checkpoint = {
             "epoch": epoch + 1,
@@ -240,11 +292,25 @@ def evaluate(config):
             "python_random": random.getstate(),
         }
 
-        if not is_improved:
-            print(f"trigger counter: {early_stop.counter}/{early_stop.patience}")
+        torch.save(checkpoint, current_save_path)
+
+        pd.DataFrame(result_dict).to_csv(result_dict_path, index=False)
 
         if early_stop.early_stop:
             print("trigger early_stop")
+            break
+
+
+def run_experiment(config_path):
+    if os.path.isfile(config_path):
+        with open(config_path, "r") as f:
+            config = json.load(f)
+            evaluate(config=config)
+    configs = os.listdir(config_path)
+    for config in configs:
+        with open(config_path, "r") as f:
+            config = json.load(f)
+            evaluate(config=config)
 
 
 run_experiment("./config.json")

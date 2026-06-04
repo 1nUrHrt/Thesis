@@ -4,9 +4,7 @@ import torch
 
 
 class EarlyStopping:
-    def __init__(self, save_path, patience=5, min_delta=1e-4, mode="min"):
-        os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
-        self.save_path = save_path
+    def __init__(self, patience=5, min_delta=1e-4, mode="min"):
         if patience < 0:
             raise ValueError(f"patience不能为负数,当前值: {patience}")
         self.patience = patience
@@ -17,10 +15,9 @@ class EarlyStopping:
         self.min_delta = min_delta
         self.counter = 0
         self.best_metric_val = None
-        self.best_epoch = None
         self.early_stop = False
 
-    def __call__(self, metric_value, epoch, model_dicts):
+    def __call__(self, metric_value):
         if self.best_metric_val is None:
             is_improved = True
         else:
@@ -31,10 +28,8 @@ class EarlyStopping:
 
         if is_improved:
             self.counter = 0
-            self.best_epoch = epoch
             self.best_metric_val = metric_value
             self.early_stop = False
-            self.save_checkpoint(model_dicts)
         else:
             self.counter += 1
             if self.counter >= self.patience:
@@ -42,11 +37,9 @@ class EarlyStopping:
 
         return is_improved
 
-
     def state_dict(self):
         state = {
             "counter": self.counter,
-            "best_epoch": self.best_epoch,
             "best_metric_val": self.best_metric_val,
             "early_stop": self.early_stop,
         }
@@ -54,13 +47,11 @@ class EarlyStopping:
 
     def load_state_dict(self, state_dict):
         self.counter = state_dict["counter"]
-        self.best_epoch = state_dict["best_epoch"]
         self.best_metric_val = state_dict["best_metric_val"]
         self.early_stop = state_dict["early_stop"]
 
-    def save_checkpoint(self, model_dicts):
+    def save_checkpoint(self, model_dicts, save_path):
         model_dicts["counter"] = self.counter
-        model_dicts["best_epoch"] = self.best_epoch
         model_dicts["best_metric_val"] = self.best_metric_val
         model_dicts["early_stop"] = self.early_stop
-        torch.save(model_dicts, self.save_path)
+        torch.save(model_dicts, save_path)

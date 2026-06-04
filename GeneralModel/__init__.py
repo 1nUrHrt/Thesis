@@ -1,7 +1,7 @@
 from .AttnGINLayer import AttnGINLayer
 from .FFNLayer import FFNLayer
-from .Decoder import Decoder
+from .DefalutDecoder import DefaultDecoder
 from .ReadoutBlock import ReadoutBlock
 
 
-__all__ = ["AttnGINLayer", "FFNLayer", "Decoder", "ReadoutBlock"]
+__all__ = ["AttnGINLayer", "FFNLayer", "DefalutDecoder", "ReadoutBlock"]

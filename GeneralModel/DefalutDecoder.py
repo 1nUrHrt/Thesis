@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 
-class Decoder(nn.Module):
+class DefaultDecoder(nn.Module):
     def __init__(self, in_feature=256, out_feature=2, dp_r=0.1):
         super().__init__()
 

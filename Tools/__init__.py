@@ -8,7 +8,7 @@ from typing import Literal
 from .SubDrugDataset import SubDrugDataset
 from AttnEncoder import AttnEncoder
 from AttnResEncoder import AttnResEncoder
-from GeneralModel import Decoder
+from GeneralModel import DefaultDecoder
 import torch
 
 
@@ -26,8 +26,8 @@ def get_encoder(config):
 def get_decoder(config):
     model_name = config["type"]
     kwargs = config["params"]
-    if model_name == "Decoder":
-        return Decoder(**kwargs)
+    if model_name == "DefaultDecoder":
+        return DefaultDecoder(**kwargs)
     else:
         raise NotImplementedError("Model {} not implemented.".format(model_name))
 
