@@ -5,7 +5,7 @@ from GeneralModel import FFNLayer
 
 
 class EncoderBlock(nn.Module):
-    def __init__(self, hidden_dim, dp_r, heads):
+    def __init__(self, hidden_dim: int, dp_r: float, heads: int):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.heads = heads

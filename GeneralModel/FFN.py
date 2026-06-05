@@ -2,7 +2,7 @@ import torch.nn as nn
 
 
 class FFN(nn.Module):
-    def __init__(self, d_model=256, d_ff=None, dp_r=0.1):
+    def __init__(self, d_model: int = 256, d_ff: int | None = None, dp_r: float = 0.1):
         super().__init__()
         self.d_model = d_model
         if d_ff is None:

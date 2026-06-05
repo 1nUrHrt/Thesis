@@ -5,7 +5,15 @@ from .EncoderBlock import EncoderBlock
 
 
 class AttnEncoder(nn.Module):
-    def __init__(self, node_dim, edge_dim, h_dim, block_num, dp_r, heads):
+    def __init__(
+        self,
+        node_dim: int,
+        edge_dim: int,
+        h_dim: int,
+        block_num: int,
+        dp_r: float,
+        heads: int,
+    ):
         super().__init__()
         self.node_dim = node_dim
         self.edge_dim = edge_dim

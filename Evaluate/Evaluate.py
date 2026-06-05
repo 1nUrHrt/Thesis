@@ -8,15 +8,15 @@ import torch
 from sklearn.metrics import f1_score, accuracy_score, roc_auc_score
 from torch.amp.autocast_mode import autocast
 from torch.amp.grad_scaler import GradScaler
-from torch import nn
 from torch.utils.data import DataLoader
-from Tools import EarlyStopping
 from Tools import (
     get_encoder,
     get_classifier,
     get_optimizer,
     get_scheduler,
     load_dataset,
+    get_criterion,
+    get_early_stop,
     Timer,
 )
 
@@ -137,13 +137,12 @@ def train(config):
     train_itc_generator.manual_seed(seed)
 
     metric = config["metric"]
-    metric_mode = "max" if metric == "f1_score" else "min"
-
     metric_average = config["metric_average"]
+
     pin_memory = True if torch.cuda.is_available() else False
 
     print(
-        f"[Train Config] Total Epochs:{epochs} Device:{device} Manual Seed:{seed} Metric:{metric} Metric Mode:{metric_mode} Metric Average:{metric_average}"
+        f"[Train Config] Total Epochs:{epochs} Device:{device} Manual Seed:{seed} Metric:{metric} Metric Average:{metric_average}"
     )
 
     base_dir = os.path.join(config["save_dir"], experiment_name)
@@ -184,9 +183,9 @@ def train(config):
     optimizer = get_optimizer(
         config["optimizer"], list(encoder.parameters()) + list(classifier.parameters())
     )
-    scheduler = get_scheduler(config["scheduler"], metric_mode, optimizer)
-    criterion = nn.CrossEntropyLoss(**config["criterion"])
-    early_stop = EarlyStopping(mode=metric_mode, **config["early_stop"])
+    scheduler = get_scheduler(config["scheduler"], optimizer)
+    criterion = get_criterion(config["criterion"])
+    early_stop = get_early_stop(config["early_stop"])
     scaler = GradScaler() if torch.cuda.is_available() else None
 
     result_dict = {
@@ -284,10 +283,14 @@ def train(config):
         result_dict["val_timer"].append(timer.elapsed)
 
         metric_value = None
-        if metric == "f1_score":
-            metric_value = val_f1
-        else:
+        if metric == "acc":
+            metric_value = val_acc
+        elif metric == "auc":
+            metric_value = val_auc
+        elif metric == "loss":
             metric_value = avg_val_loss
+        else:
+            metric_value = val_f1
 
         scheduler.step(metric_value)
         is_improved = early_stop(metric_value)
@@ -301,7 +304,6 @@ def train(config):
                 {
                     "epoch": current_epoch,
                     "metric": metric,
-                    "metric_mode": metric_mode,
                     "metric_average": metric_average,
                     "loss": avg_val_loss,
                     "acc": val_acc,
@@ -375,7 +377,7 @@ def test(config):
 
     encoder = get_encoder(config["encoder"]).to(device)
     classifier = get_classifier(config["classifier"]).to(device)
-    criterion = nn.CrossEntropyLoss(**config["criterion"])
+    criterion = get_criterion(config["criterion"])
 
     base_dir = os.path.join(config["save_dir"], experiment_name)
     best_save_path = os.path.join(base_dir, config["best_save_name"])
@@ -394,7 +396,7 @@ def test(config):
     record["auc"].append(best_model["auc"])
 
     print(
-        f"[Test Config] Device:{device} Metric:{best_model['metric']} Metric Mode:{best_model['metric_mode']} Metric Average:{best_model['metric_average']}"
+        f"[Test Config] Device:{device} Metric:{best_model['metric']} Metric Average:{best_model['metric_average']}"
     )
 
     print("[Test Start]")

@@ -8,9 +8,9 @@ from .AttnResidual import AttnResidual
 class AttnResEncoderBlock(nn.Module):
     def __init__(
         self,
-        h_dim,
-        dp_r,
-        heads,
+        h_dim: int,
+        dp_r: float,
+        heads: int,
     ):
         super().__init__()
         self.h_dim = h_dim

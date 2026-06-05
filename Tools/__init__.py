@@ -1,14 +1,17 @@
 from .InteractionDataset import InteractionDataset
 from .DrugDataset import DrugDataset
-from .EarlyStopping import EarlyStopping
+from ..EarlyStop.DefaultEarlyStop import DefaultEarlyStop
 
 
 import os
 from typing import Literal
 from .SubDrugDataset import SubDrugDataset
-import Encoder
+import Encoder as Encoder
 import Classifier
-import torch
+import Optimizer
+import LrScheduler
+import Criterion
+import EarlyStop
 
 import time
 
@@ -24,29 +27,47 @@ class Timer:
 
 
 def get_encoder(config):
-    model_name = config["type"]
-    if model_name not in Encoder.__all__:
-        raise NotImplementedError("Enocoder {} not supported.".format(model_name))
-    return getattr(Encoder, model_name)(**config["params"])
+    model_type = config["type"]
+    if model_type not in Encoder.__all__:
+        raise NotImplementedError("Enocoder {} not supported.".format(model_type))
+    return getattr(Encoder, model_type)(**config["params"])
 
 
 def get_classifier(config):
-    model_name = config["type"]
-    if model_name not in Classifier.__all__:
-        raise NotImplementedError("Classifier {} not supported.".format(model_name))
-    return getattr(Classifier, model_name)(**config["params"])
+    model_type = config["type"]
+    if model_type not in Classifier.__all__:
+        raise NotImplementedError("Classifier {} not supported.".format(model_type))
+    return getattr(Classifier, model_type)(**config["params"])
 
 
 def get_optimizer(config, model_parameters):
-    optimizer_cls = getattr(torch.optim, config["type"])
-    optimizer = optimizer_cls(model_parameters, **config["params"])
-    return optimizer
+    optimizer_type = config["type"]
+    if optimizer_type not in Optimizer.__all__:
+        raise NotImplementedError("Optimizer {} not supported.".format(optimizer_type))
+    return getattr(Optimizer, optimizer_type)(model_parameters, **config["params"])
 
 
-def get_scheduler(config, mode, optimizer):
-    scheduler_cls = getattr(torch.optim.lr_scheduler, config["type"])
-    scheduler = scheduler_cls(optimizer, mode=mode, **config["params"])
-    return scheduler
+def get_scheduler(config, optimizer):
+    scheduler_type = config["type"]
+    if scheduler_type not in LrScheduler.__all__:
+        raise NotImplementedError(
+            "LrScheduler {} not supported.".format(scheduler_type)
+        )
+    return getattr(LrScheduler, scheduler_type)(optimizer, **config["params"])
+
+
+def get_criterion(config):
+    criterion_type = config["type"]
+    if criterion_type not in Criterion.__all__:
+        raise NotImplementedError("Criterion {} not supported.".format(criterion_type))
+    return getattr(Criterion, criterion_type)(**config["params"])
+
+
+def get_early_stop(config):
+    early_stop_type = config["type"]
+    if early_stop_type not in EarlyStop.__all__:
+        raise NotImplementedError("EarlyStop {} not supported.".format(early_stop_type))
+    return getattr(EarlyStop, early_stop_type)(**config["params"])
 
 
 def load_dataset(base_dir: str, split_type: Literal["s1", "s2", "s3"]):
@@ -81,7 +102,7 @@ def load_dataset(base_dir: str, split_type: Literal["s1", "s2", "s3"]):
 __all__ = [
     "InteractionDataset",
     "DrugDataset",
-    "EarlyStopping",
+    "DefaultEarlyStop",
     "get_encoder",
     "get_classifier",
     "get_optimizer",

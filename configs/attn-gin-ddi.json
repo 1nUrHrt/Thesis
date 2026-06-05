@@ -7,8 +7,8 @@
 	"test_dict_name": "test_dict.csv",
 	"epochs": 200,
 	"metric": "f1_score",
-	"manual_seed": 42,
 	"metric_average": "macro",
+	"manual_seed": 42,
 	"dataset": {
 		"base_dir": "./data",
 		"split_type": "s1"
@@ -72,18 +72,26 @@
 		}
 	},
 	"criterion": {
-		"label_smoothing": 0.1
+		"type": "CrossEntropyLoss",
+		"params": {
+			"label_smoothing": 0.1
+		}
 	},
 	"scheduler": {
 		"type": "ReduceLROnPlateau",
 		"params": {
+			"mode": "max",
 			"factor": 0.5,
 			"patience": 5,
 			"min_lr": 1e-6
 		}
 	},
 	"early_stop": {
-		"patience": 10,
-		"min_delta": 0.001
+		"type": "DefaultEarlyStop",
+		"params": {
+			"mode": "max",
+			"patience": 10,
+			"min_delta": 0.001
+		}
 	}
 }
