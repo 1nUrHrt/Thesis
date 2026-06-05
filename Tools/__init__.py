@@ -1,6 +1,6 @@
 from .InteractionDataset import InteractionDataset
 from .DrugDataset import DrugDataset
-from ..EarlyStop.DefaultEarlyStop import DefaultEarlyStop
+from EarlyStop import DefaultEarlyStop
 
 
 import os
