@@ -21,7 +21,7 @@ from Tools import (
 )
 
 
-def train(
+def train_one_epoch(
     encoder,
     decoder,
     drug_loader,
@@ -78,7 +78,7 @@ def train(
     return avg_train_loss, avg_train_acc
 
 
-def validate(
+def val_one_epoch(
     encoder, decoder, drug_loader, itc_loader, criterion, metric_average, device
 ):
     encoder.eval()
@@ -115,52 +115,15 @@ def validate(
     return avg_val_loss, val_acc, val_f1, val_auc
 
 
-def test(encoder, decoder, drug_loader, itc_loader, criterion, metric_average, device):
-    encoder.eval()
-    decoder.eval()
-
-    val_loss = 0.0
-
-    all_preds = []
-    all_labels = []
-    all_probs = []
-
-    with torch.no_grad():
-        all_drugs = torch.cat([encoder(drugs.to(device)) for drugs in drug_loader])
-
-        for d1, d2, labels in itc_loader:
-            d1, d2, labels = d1.to(device), d2.to(device), labels.to(device)
-            logits = decoder(all_drugs[d1], all_drugs[d2])
-            loss = criterion(logits, labels)
-
-            preds = torch.argmax(logits, dim=-1)
-            prob = torch.softmax(logits, dim=-1)
-
-            val_loss += loss.item()
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
-            all_probs.append(prob.cpu().numpy())
-
-    avg_val_loss = val_loss / len(itc_loader)
-    val_acc = accuracy_score(all_labels, all_preds)
-    val_f1 = f1_score(all_labels, all_preds, average=metric_average, zero_division=0)
-    val_auc = roc_auc_score(
-        all_labels, all_probs, multi_class="ovr", average=metric_average
-    )
-    return avg_val_loss, val_acc, val_f1, val_auc
-
-
-def evaluate(config):
+def train(config):
 
     experiment_name = config["name"]
-    print(f"current experiment:{experiment_name}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"device:{device}")
 
     epochs = config["epochs"]
+
     start_epoch = 0
-    print(f"total epochs:{epochs}")
 
     seed = config["manual_seed"]
 
@@ -179,15 +142,17 @@ def evaluate(config):
     metric_average = config["metric_average"]
     pin_memory = True if torch.cuda.is_available() else False
 
+    print(
+        f"[Train Config] Total Epochs:{epochs} Device:{device} Manual Seed:{seed} Metric:{metric} Metric Mode:{metric_mode} Metric Average:{metric_average}"
+    )
+
     base_dir = os.path.join(config["save_dir"], experiment_name)
     os.makedirs(base_dir, exist_ok=True)
     best_save_path = os.path.join(base_dir, config["best_save_name"])
     current_save_path = os.path.join(base_dir, config["current_save_name"])
     result_dict_path = os.path.join(base_dir, config["result_dict_name"])
 
-    train_set, train_itc, val_set, val_itc, test_set, test_itc = load_dataset(
-        **config["dataset"]
-    )
+    train_set, train_itc, val_set, val_itc, _, _ = load_dataset(**config["dataset"])
     loader_config = config["data_loader"]
     train_set_loader = DataLoader(
         train_set,
@@ -200,12 +165,6 @@ def evaluate(config):
         collate_fn=val_set.drug_collate_fn,
         pin_memory=pin_memory,
         **loader_config["val_set"],
-    )
-    test_set_loader = DataLoader(
-        test_set,
-        collate_fn=test_set.drug_collate_fn,
-        pin_memory=pin_memory,
-        **loader_config["test_set"],
     )
     train_itc_loader = DataLoader(
         train_itc,
@@ -220,12 +179,6 @@ def evaluate(config):
         pin_memory=pin_memory,
         **loader_config["val_itc"],
     )
-    test_itc_loader = DataLoader(
-        test_itc,
-        collate_fn=test_itc.itc_collate_fn,
-        pin_memory=pin_memory,
-        **loader_config["test_itc"],
-    )
     encoder = get_encoder(config["encoder"]).to(device)
     decoder = get_decoder(config["decoder"]).to(device)
     optimizer = get_optimizer(
@@ -237,11 +190,11 @@ def evaluate(config):
     scaler = GradScaler() if torch.cuda.is_available() else None
 
     result_dict = {
-        "avg_train_loss": [],
-        "avg_train_acc": [],
-        "avg_val_loss": [],
+        "train_loss": [],
+        "train_acc": [],
+        "val_loss": [],
         "val_acc": [],
-        "val_f1": [],
+        "val_f1_score": [],
         "val_auc": [],
         "train_timer": [],
         "val_timer": [],
@@ -250,7 +203,6 @@ def evaluate(config):
     total_timer = 0
 
     if os.path.exists(current_save_path):
-        print("loading history models")
         current_checkpoint = torch.load(current_save_path, weights_only=False)
         start_epoch = current_checkpoint["epoch"]
         encoder.load_state_dict(current_checkpoint["encoder"])
@@ -272,18 +224,29 @@ def evaluate(config):
         torch.random.set_rng_state(current_checkpoint["torch_random"])
         np.random.set_state(current_checkpoint["numpy_random"])
         random.setstate(current_checkpoint["python_random"])
-        print("history model load successfully")
+        print("[Load Model] successfully")
+
+    if early_stop.early_stop:
+        print(f"[Early Stop] [Epoch:{start_epoch}/{epochs}] trigger early stop")
+        return
+
+    if start_epoch >= epochs:
+        print(
+            f"[Stop Experiment] [Epoch:{start_epoch}/{epochs}] experiment has finished"
+        )
+        return
 
     if os.path.exists(result_dict_path):
         df = pd.read_csv(result_dict_path)
         result_dict = df.to_dict(orient="list")
         total_timer = sum(result_dict["train_timer"]) + sum(result_dict["val_timer"])
 
+    print("[Train Srart]")
     for epoch in range(start_epoch, epochs):
         current_epoch = epoch + 1
         print(f"[Current Epoch:{current_epoch}/{epochs}]")
         with Timer() as timer:
-            avg_train_loss, avg_train_acc = train(
+            avg_train_loss, avg_train_acc = train_one_epoch(
                 encoder,
                 decoder,
                 train_set_loader,
@@ -294,14 +257,14 @@ def evaluate(config):
                 scaler,
             )
         print(
-            f"[Train] [Epoch:{current_epoch}/{epochs}] avg_train_loss:{avg_train_loss:.5f},avg_train_acc:{avg_train_acc:.5f},elapsed:{timer.elapsed:.5f} s"
+            f"[Train] train_loss:{avg_train_loss:.5f},train_acc:{avg_train_acc:.5f},elapsed:{timer.elapsed:.5f} s"
         )
         total_timer += timer.elapsed
-        result_dict["avg_train_loss"].append(avg_train_loss)
-        result_dict["avg_train_acc"].append(avg_train_acc)
+        result_dict["train_loss"].append(avg_train_loss)
+        result_dict["train_acc"].append(avg_train_acc)
         result_dict["train_timer"].append(timer.elapsed)
         with Timer() as timer:
-            avg_val_loss, val_acc, val_f1, val_auc = validate(
+            avg_val_loss, val_acc, val_f1, val_auc = val_one_epoch(
                 encoder,
                 decoder,
                 val_set_loader,
@@ -311,12 +274,12 @@ def evaluate(config):
                 device,
             )
         print(
-            f"[Val] [Epoch:{current_epoch}/{epochs}] avg_val_loss:{avg_val_loss:.5f},val_acc:{val_acc:.5f},val_f1:{val_f1:.5f},val_auc:{val_auc:.5f},elapsed:{timer.elapsed:.5f} s"
+            f"[Val] val_loss:{avg_val_loss:.5f},val_acc:{val_acc:.5f},val_f1_score:{val_f1:.5f},val_auc:{val_auc:.5f},elapsed:{timer.elapsed:.5f} s"
         )
         total_timer += timer.elapsed
-        result_dict["avg_val_loss"].append(avg_val_loss)
+        result_dict["val_loss"].append(avg_val_loss)
         result_dict["val_acc"].append(val_acc)
-        result_dict["val_f1"].append(val_f1)
+        result_dict["val_f1_score"].append(val_f1)
         result_dict["val_auc"].append(val_auc)
         result_dict["val_timer"].append(timer.elapsed)
 
@@ -331,19 +294,26 @@ def evaluate(config):
 
         if not is_improved:
             print(
-                f"[Early Stop] [Epoch:{current_epoch}/{epochs}],trigger counter: {early_stop.counter}/{early_stop.patience}"
+                f"[Early Stop] [Epoch:{current_epoch}/{epochs}] trigger counter: {early_stop.counter}/{early_stop.patience}"
             )
         else:
-            early_stop.save_checkpoint(
+            torch.save(
                 {
-                    "best_epoch": current_epoch,
+                    "epoch": current_epoch,
+                    "metric": metric,
+                    "metric_mode": metric_mode,
+                    "metric_average": metric_average,
+                    "loss": avg_val_loss,
+                    "acc": val_acc,
+                    "f1_score": val_f1,
+                    "auc": val_auc,
                     "encoder": encoder.state_dict(),
                     "decoder": decoder.state_dict(),
                 },
                 best_save_path,
             )
             print(
-                f"[Save Checkpoint] [Epoch:{current_epoch}/{epochs}],save best checkpoint successfully"
+                f"[Save Model] [Epoch:{current_epoch}/{epochs}] save best Model successfully"
             )
 
         checkpoint = {
@@ -365,7 +335,7 @@ def evaluate(config):
 
         torch.save(checkpoint, current_save_path)
         print(
-            f"[Save Checkpoint] [Epoch:{current_epoch}/{epochs}],save current checkpoint successfully"
+            f"[Save Checkpoint] [Epoch:{current_epoch}/{epochs}] save current checkpoint successfully"
         )
 
         print(f"[Epoch {current_epoch}/{epochs}] total elapsed:{total_timer}")
@@ -373,21 +343,153 @@ def evaluate(config):
         pd.DataFrame(result_dict).to_csv(result_dict_path, index=False)
 
         if early_stop.early_stop:
-            print(
-                f"[Save Checkpoint] [Epoch:{current_epoch}/{epochs}] trigger early_stop"
-            )
+            print(f"[Early Stop] [Epoch:{current_epoch}/{epochs}] trigger early stop")
             break
 
 
-def run_experiment(config_path):
+def test(config):
+
+    experiment_name = config["name"]
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    _, _, _, _, test_set, test_itc = load_dataset(**config["dataset"])
+
+    pin_memory = True if torch.cuda.is_available() else False
+
+    loader_config = config["data_loader"]
+
+    test_set_loader = DataLoader(
+        test_set,
+        collate_fn=test_set.drug_collate_fn,
+        pin_memory=pin_memory,
+        **loader_config["test_set"],
+    )
+
+    test_itc_loader = DataLoader(
+        test_itc,
+        collate_fn=test_itc.itc_collate_fn,
+        pin_memory=pin_memory,
+        **loader_config["test_itc"],
+    )
+
+    encoder = get_encoder(config["encoder"]).to(device)
+    decoder = get_decoder(config["decoder"]).to(device)
+    criterion = nn.CrossEntropyLoss(**config["criterion"])
+
+    base_dir = os.path.join(config["save_dir"], experiment_name)
+    best_save_path = os.path.join(base_dir, config["best_save_name"])
+    test_dict_path = os.path.join(base_dir, config["test_dict_name"])
+    record = {"loss": [], "acc": [], "f1_score": [], "auc": []}
+    if not os.path.exists(best_save_path):
+        print(f"The best model of current experiment:{experiment_name} don't exist")
+        return
+    print("loading best models")
+    best_model = torch.load(best_save_path, weights_only=False)
+    encoder.load_state_dict(best_model["encoder"])
+    decoder.load_state_dict(best_model["decoder"])
+    record["loss"].append(best_model["loss"])
+    record["acc"].append(best_model["acc"])
+    record["f1_score"].append(best_model["f1_score"])
+    record["auc"].append(best_model["auc"])
+
+    print(
+        f"[Test Config] Device:{device} Metric:{best_model['metric']} Metric Mode:{best_model['metric_mode']} Metric Average:{best_model['metric_average']}"
+    )
+
+    print("[Test Start]")
+
+    encoder.eval()
+    decoder.eval()
+
+    val_loss = 0.0
+
+    all_preds = []
+    all_labels = []
+    all_probs = []
+
+    with torch.no_grad():
+        all_drugs = torch.cat([encoder(drugs.to(device)) for drugs in test_set_loader])
+
+        for d1, d2, labels in test_itc_loader:
+            d1, d2, labels = d1.to(device), d2.to(device), labels.to(device)
+            logits = decoder(all_drugs[d1], all_drugs[d2])
+            loss = criterion(logits, labels)
+
+            preds = torch.argmax(logits, dim=-1)
+            prob = torch.softmax(logits, dim=-1)
+
+            val_loss += loss.item()
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+            all_probs.append(prob.cpu().numpy())
+    all_probs = np.concatenate(all_probs, axis=0) 
+    avg_val_loss = val_loss / len(test_itc_loader)
+    val_acc = accuracy_score(all_labels, all_preds)
+    val_f1 = f1_score(
+        all_labels, all_preds, average=best_model["metric_average"], zero_division=0
+    )
+    val_auc = roc_auc_score(
+        all_labels, all_probs, multi_class="ovr", average=best_model["metric_average"]
+    )
+
+    record["loss"].append(avg_val_loss)
+    record["acc"].append(val_acc)
+    record["f1_score"].append(val_f1)
+    record["auc"].append(val_auc)
+    print(
+        f"[Best] loss:{record['loss'][0]:.5},acc:{record['acc'][0]:.5},f1:{record['f1_score'][0]:.5},auc:{record['auc'][0]:.5}"
+    )
+    print(
+        f"[Test] loss:{record['loss'][1]:.5},acc:{record['acc'][1]:.5},f1:{record['f1_score'][1]:.5},auc:{record['auc'][1]:.5}"
+    )
+    pd.DataFrame(record).to_csv(test_dict_path, index=False)
+
+
+def get_configs(config_path):
+    configs = None
+    if not os.path.exists(config_path):
+        print(f"config_path:{config_path} don't exist")
+        return None
     if os.path.isfile(config_path):
-        with open(config_path, "r") as f:
-            config = json.load(f)
-            evaluate(config=config)
+        configs = [config_path]
     else:
-        configs = os.listdir(config_path)
-        for config in configs:
-            current_path = os.path.join(config_path, config)
-            with open(current_path, "r") as f:
-                config = json.load(f)
-                evaluate(config=config)
+        configs = [
+            os.path.join(config_path, config) for config in os.listdir(config_path)
+        ]
+    return configs
+
+
+def run_train(config_path):
+    configs = get_configs(config_path)
+    if configs is None:
+        return
+    for config in configs:
+        with open(config, "r") as f:
+            config = json.load(f)
+            experiment_name = config["name"]
+            print(f"Start Train:{experiment_name}")
+            train(config=config)
+            print(f"Finish Train:{experiment_name}")
+
+
+def run_test(config_path):
+    configs = get_configs(config_path)
+    if configs is None:
+        return
+    for config in configs:
+        with open(config, "r") as f:
+            config = json.load(f)
+            experiment_name = config["name"]
+            print(f"Start Test:{experiment_name}")
+            test(config=config)
+            print(f"Finish Test:{experiment_name}")
+
+
+def run_experiment(config_path):
+    configs = get_configs(config_path)
+    if configs is None:
+        return
+    for config in configs:
+        run_train(config)
+        run_test(config)

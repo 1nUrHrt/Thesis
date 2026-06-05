@@ -4,6 +4,7 @@
 	"best_save_name": "best.pt",
 	"current_save_name": "current.pt",
 	"result_dict_name": "result_dict.csv",
+	"test_dict_name": "test_dict.csv",
 	"epochs": 200,
 	"metric": "f1_score",
 	"manual_seed": 42,

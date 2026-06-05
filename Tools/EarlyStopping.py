@@ -1,8 +1,3 @@
-import os
-
-import torch
-
-
 class EarlyStopping:
     def __init__(self, patience=5, min_delta=1e-4, mode="min"):
         if patience < 0:
@@ -49,9 +44,3 @@ class EarlyStopping:
         self.counter = state_dict["counter"]
         self.best_metric_val = state_dict["best_metric_val"]
         self.early_stop = state_dict["early_stop"]
-
-    def save_checkpoint(self, model_dicts, save_path):
-        model_dicts["counter"] = self.counter
-        model_dicts["best_metric_val"] = self.best_metric_val
-        model_dicts["early_stop"] = self.early_stop
-        torch.save(model_dicts, save_path)
