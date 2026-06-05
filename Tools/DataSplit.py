@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
-def split_s1(base_dir, itc_file_name, tr=0.7, va=0.1, te=0.2, seed=42):
+def split_s0(base_dir, itc_file_name, tr=0.7, va=0.1, te=0.2, seed=42):
     itc = pd.read_csv(str(os.path.join(base_dir, itc_file_name)))
     itc = itc.drop_duplicates(itc.columns, keep="first")
 
@@ -33,7 +33,7 @@ def split_s1(base_dir, itc_file_name, tr=0.7, va=0.1, te=0.2, seed=42):
     test_df["drug2"] = test_df["drug2"].map(test_dict)
 
     save_splits(
-        os.path.join(base_dir, "s1"),
+        os.path.join(base_dir, "s0"),
         train_drug,
         val_drug,
         test_drug,
@@ -66,7 +66,7 @@ def save_splits(dir_path, train_drugs, val_drug, test_drug, train, val, test):
 
 
 if __name__ == "__main__":
-    split_s1(
+    split_s0(
         base_dir="./data",
         itc_file_name="KnownDDI.csv",
         tr=0.7,

@@ -79,7 +79,14 @@ def train_one_epoch(
 
 
 def val_one_epoch(
-    encoder, classifier, drug_loader, itc_loader, criterion, metric_average, device
+    encoder,
+    classifier,
+    drug_loader,
+    itc_loader,
+    criterion,
+    metric_average,
+    scenario,
+    device,
 ):
     encoder.eval()
     classifier.eval()

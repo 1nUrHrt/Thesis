@@ -11,7 +11,7 @@
     "manual_seed": 42,
     "dataset": {
         "base_dir": "./data",
-        "split_type": "s1"
+        "split_type": "s0"
     },
     "data_loader": {
         "train_set": {

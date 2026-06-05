@@ -1,4 +1,3 @@
-
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
@@ -11,6 +10,10 @@ class InteractionDataset(Dataset):
 
     def __len__(self):
         return len(self.itc)
+
+    @property
+    def scenario(self):
+        return self.itc["scenario"]
 
     def __getitem__(self, idx):
         return self.itc.loc[idx].values
