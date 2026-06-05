@@ -488,7 +488,7 @@ def run_test(config_path):
             print(f"Finish Test:{experiment_name}")
 
 
-def run_experiment(config_path):
+def run(config_path):
     configs = get_configs(config_path)
     if configs is None:
         return
