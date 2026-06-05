@@ -57,14 +57,14 @@
             "block_size": 1
         }
     },
-    "decoder": {
-        "type": "DefaultDecoder",
-        "params": {
-            "in_feature": 128,
-            "out_feature": 86,
-            "dp_r": 0.1
-        }
-    },
+	"classifier": {
+		"type": "DefaultClassifier",
+		"params": {
+			"in_feature": 128,
+			"out_feature": 86,
+			"dp_r": 0.1
+		}
+	},
     "optimizer": {
         "type": "Adam",
         "params": {

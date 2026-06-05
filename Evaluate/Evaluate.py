@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from Tools import EarlyStopping
 from Tools import (
     get_encoder,
-    get_decoder,
+    get_classifier,
     get_optimizer,
     get_scheduler,
     load_dataset,
@@ -23,7 +23,7 @@ from Tools import (
 
 def train_one_epoch(
     encoder,
-    decoder,
+    classifier,
     drug_loader,
     itc_loader,
     optimizer,
@@ -33,7 +33,7 @@ def train_one_epoch(
 ):
 
     encoder.train()
-    decoder.train()
+    classifier.train()
 
     train_loss = 0.0
     train_acc = 0.0
@@ -48,7 +48,7 @@ def train_one_epoch(
                 all_drugs = torch.cat(
                     [encoder(drugs.to(device)) for drugs in drug_loader]
                 )
-                logits = decoder(all_drugs[d1], all_drugs[d2])
+                logits = classifier(all_drugs[d1], all_drugs[d2])
                 loss = criterion(logits, labels)
 
             scaler.scale(loss).backward()
@@ -56,7 +56,7 @@ def train_one_epoch(
             scaler.update()
         else:
             all_drugs = torch.cat([encoder(drugs.to(device)) for drugs in drug_loader])
-            logits = decoder(all_drugs[d1], all_drugs[d2])
+            logits = classifier(all_drugs[d1], all_drugs[d2])
             loss = criterion(logits, labels)
             loss.backward()
             optimizer.step()
@@ -79,10 +79,10 @@ def train_one_epoch(
 
 
 def val_one_epoch(
-    encoder, decoder, drug_loader, itc_loader, criterion, metric_average, device
+    encoder, classifier, drug_loader, itc_loader, criterion, metric_average, device
 ):
     encoder.eval()
-    decoder.eval()
+    classifier.eval()
 
     val_loss = 0.0
 
@@ -95,7 +95,7 @@ def val_one_epoch(
 
         for d1, d2, labels in itc_loader:
             d1, d2, labels = d1.to(device), d2.to(device), labels.to(device)
-            logits = decoder(all_drugs[d1], all_drugs[d2])
+            logits = classifier(all_drugs[d1], all_drugs[d2])
             loss = criterion(logits, labels)
 
             preds = torch.argmax(logits, dim=-1)
@@ -180,9 +180,9 @@ def train(config):
         **loader_config["val_itc"],
     )
     encoder = get_encoder(config["encoder"]).to(device)
-    decoder = get_decoder(config["decoder"]).to(device)
+    classifier = get_classifier(config["classifier"]).to(device)
     optimizer = get_optimizer(
-        config["optimizer"], list(encoder.parameters()) + list(decoder.parameters())
+        config["optimizer"], list(encoder.parameters()) + list(classifier.parameters())
     )
     scheduler = get_scheduler(config["scheduler"], metric_mode, optimizer)
     criterion = nn.CrossEntropyLoss(**config["criterion"])
@@ -206,7 +206,7 @@ def train(config):
         current_checkpoint = torch.load(current_save_path, weights_only=False)
         start_epoch = current_checkpoint["epoch"]
         encoder.load_state_dict(current_checkpoint["encoder"])
-        decoder.load_state_dict(current_checkpoint["decoder"])
+        classifier.load_state_dict(current_checkpoint["classifier"])
         optimizer.load_state_dict(current_checkpoint["optimizer"])
         scheduler.load_state_dict(current_checkpoint["scheduler"])
         early_stop.load_state_dict(current_checkpoint["early_stop"])
@@ -248,7 +248,7 @@ def train(config):
         with Timer() as timer:
             avg_train_loss, avg_train_acc = train_one_epoch(
                 encoder,
-                decoder,
+                classifier,
                 train_set_loader,
                 train_itc_loader,
                 optimizer,
@@ -266,7 +266,7 @@ def train(config):
         with Timer() as timer:
             avg_val_loss, val_acc, val_f1, val_auc = val_one_epoch(
                 encoder,
-                decoder,
+                classifier,
                 val_set_loader,
                 val_itc_loader,
                 criterion,
@@ -308,7 +308,7 @@ def train(config):
                     "f1_score": val_f1,
                     "auc": val_auc,
                     "encoder": encoder.state_dict(),
-                    "decoder": decoder.state_dict(),
+                    "classifier": classifier.state_dict(),
                 },
                 best_save_path,
             )
@@ -319,7 +319,7 @@ def train(config):
         checkpoint = {
             "epoch": current_epoch,
             "encoder": encoder.state_dict(),
-            "decoder": decoder.state_dict(),
+            "classifier": classifier.state_dict(),
             "optimizer": optimizer.state_dict(),
             "scheduler": scheduler.state_dict(),
             "early_stop": early_stop.state_dict(),
@@ -374,7 +374,7 @@ def test(config):
     )
 
     encoder = get_encoder(config["encoder"]).to(device)
-    decoder = get_decoder(config["decoder"]).to(device)
+    classifier = get_classifier(config["classifier"]).to(device)
     criterion = nn.CrossEntropyLoss(**config["criterion"])
 
     base_dir = os.path.join(config["save_dir"], experiment_name)
@@ -387,7 +387,7 @@ def test(config):
     print("loading best models")
     best_model = torch.load(best_save_path, weights_only=False)
     encoder.load_state_dict(best_model["encoder"])
-    decoder.load_state_dict(best_model["decoder"])
+    classifier.load_state_dict(best_model["classifier"])
     record["loss"].append(best_model["loss"])
     record["acc"].append(best_model["acc"])
     record["f1_score"].append(best_model["f1_score"])
@@ -400,7 +400,7 @@ def test(config):
     print("[Test Start]")
 
     encoder.eval()
-    decoder.eval()
+    classifier.eval()
 
     val_loss = 0.0
 
@@ -413,7 +413,7 @@ def test(config):
 
         for d1, d2, labels in test_itc_loader:
             d1, d2, labels = d1.to(device), d2.to(device), labels.to(device)
-            logits = decoder(all_drugs[d1], all_drugs[d2])
+            logits = classifier(all_drugs[d1], all_drugs[d2])
             loss = criterion(logits, labels)
 
             preds = torch.argmax(logits, dim=-1)
@@ -423,7 +423,7 @@ def test(config):
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
             all_probs.append(prob.cpu().numpy())
-    all_probs = np.concatenate(all_probs, axis=0) 
+    all_probs = np.concatenate(all_probs, axis=0)
     avg_val_loss = val_loss / len(test_itc_loader)
     val_acc = accuracy_score(all_labels, all_preds)
     val_f1 = f1_score(

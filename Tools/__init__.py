@@ -6,9 +6,8 @@ from .EarlyStopping import EarlyStopping
 import os
 from typing import Literal
 from .SubDrugDataset import SubDrugDataset
-from AttnEncoder import AttnEncoder
-from AttnResEncoder import AttnResEncoder
-from GeneralModel import DefaultDecoder
+import Encoder
+import Classifier
 import torch
 
 import time
@@ -26,22 +25,16 @@ class Timer:
 
 def get_encoder(config):
     model_name = config["type"]
-    kwargs = config["params"]
-    if model_name == "AttnEncoder":
-        return AttnEncoder(**kwargs)
-    elif model_name == "AttnResEncoder":
-        return AttnResEncoder(**kwargs)
-    else:
-        raise NotImplementedError("Model {} not implemented.".format(model_name))
+    if model_name not in Encoder.__all__:
+        raise NotImplementedError("Enocoder {} not supported.".format(model_name))
+    return getattr(Encoder, model_name)(**config["params"])
 
 
-def get_decoder(config):
+def get_classifier(config):
     model_name = config["type"]
-    kwargs = config["params"]
-    if model_name == "DefaultDecoder":
-        return DefaultDecoder(**kwargs)
-    else:
-        raise NotImplementedError("Model {} not implemented.".format(model_name))
+    if model_name not in Classifier.__all__:
+        raise NotImplementedError("Classifier {} not supported.".format(model_name))
+    return getattr(Classifier, model_name)(**config["params"])
 
 
 def get_optimizer(config, model_parameters):
@@ -90,7 +83,7 @@ __all__ = [
     "DrugDataset",
     "EarlyStopping",
     "get_encoder",
-    "get_decoder",
+    "get_classifier",
     "get_optimizer",
     "get_scheduler",
     "load_dataset",
