@@ -85,7 +85,6 @@ def val_one_epoch(
     itc_loader,
     criterion,
     metric_average,
-    scenario,
     device,
 ):
     encoder.eval()
@@ -114,6 +113,9 @@ def val_one_epoch(
             all_probs.append(prob.cpu().numpy())
     all_probs = np.concatenate(all_probs, axis=0)
     avg_val_loss = val_loss / len(itc_loader)
+
+  
+
     val_acc = accuracy_score(all_labels, all_preds)
     val_f1 = f1_score(all_labels, all_preds, average=metric_average, zero_division=0)
     val_auc = roc_auc_score(

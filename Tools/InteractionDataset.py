@@ -13,6 +13,10 @@ class InteractionDataset(Dataset):
 
     @property
     def scenario(self):
+        return self.itc["scenario"].drop_duplicates(keep="first").reset_index(drop=True)
+
+    @property
+    def scenario_label(self):
         return self.itc["scenario"]
 
     def __getitem__(self, idx):
